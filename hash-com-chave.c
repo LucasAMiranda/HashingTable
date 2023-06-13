@@ -1,212 +1,210 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <gnuplot_c.h>
 
-#define MAX_NOMES 100788
-#define TAM_MAX_NOME 100
-#define NUM_CHAVES 53
+#define SIZE 53
 
-typedef struct Node {
-    char nome[TAM_MAX_NOME];
-    struct Node* prox;
-    struct Node* ant;
-} Node;
+typedef struct sElemento {
+   char nome[31];
+   struct sElemento *next;
+   struct sElemento *prev;
+} Elemento;
 
-Node* tabela[NUM_CHAVES];
+typedef struct sLista {
+     struct sElemento *head;
+     struct sElemento *tail;
+     int tam;
+} Lista;
+ 
+typedef struct sTabelaHash {
+   Lista *chaves[SIZE];
+} TabelaHash;
 
-int hash(const char* nome) {
-    int soma = 0;
-    int i = 0;
-    while (nome[i] != '\0') {
-        soma += (int) nome[i];
-        i++;
-    }
-    return soma % NUM_CHAVES;
+// Funções da lista encadeada
+Lista* criaLista();
+Elemento* criaElemento(char*);
+int insereNaLista(Lista*, Elemento*);
+int removeDaLista(Lista*, Elemento*);
+void percorreLista(Lista*);
+Elemento* pesquisaNaLista(Lista*, char*);
+void limpaLista(Lista*);
+
+// Funções da tabela hash
+int funcaoHash(char*);
+void insereNaTabela(TabelaHash*, char*);
+TabelaHash* criaTabela();
+void percorreTabela(TabelaHash*);
+void removeNaTabela(TabelaHash*, char*);
+
+int main(void) {
+  TabelaHash *hash;
+  hash = criaTabela();
+    
+  FILE* arquivo = fopen("nomes.txt", "r");
+  if (arquivo == NULL) {
+    printf("Erro ao abrir o arquivo.\n");
+    return 1;
+  }
+
+  char linha[31];
+  while (fgets(linha, sizeof(linha), arquivo) != NULL) {
+    linha[strcspn(linha, "\n")] = '\0';
+    insereNaTabela(hash, linha);
+  }
+
+  fclose(arquivo);
+
+  percorreTabela(hash);
+  
+  return 0;
 }
 
-void inserirNome(const char* nome) {
-    int chave = hash(nome);
-
-    // Criar um novo nó para o nome
-    Node* novoNome = (Node*) malloc(sizeof(Node));
-    strcpy(novoNome->nome, nome);
-    novoNome->prox = NULL;
-    novoNome->ant = NULL;
-
-    // Verificar se a chave está vazia
-    if (tabela[chave] == NULL) {
-        tabela[chave] = novoNome;
-    } else {
-        // Caso contrário, inserir no final da lista
-        Node* atual = tabela[chave];
-        while (atual->prox != NULL) {
-            atual = atual->prox;
-        }
-        atual->prox = novoNome;
-        novoNome->ant = atual;
-    }
+Lista* criaLista() {
+  Lista* lista = (Lista*) malloc(sizeof(Lista));
+  if (lista == NULL) {
+    return NULL;
+  }
+  else {
+    lista->head = NULL;
+    lista->tail = NULL;
+    lista->tam = 0;
+  }
+  return lista;
 }
 
-int consultarNome(const char* nome) {
-    int chave = hash(nome);
-
-    // Verificar se a chave está vazia
-    if (tabela[chave] == NULL) {
-        return 0;
+TabelaHash* criaTabela() {
+  TabelaHash* tabela = (TabelaHash*) malloc(sizeof(TabelaHash));
+  if (tabela == NULL) {
+    return NULL;
+  } else {
+    for (int i = 0; i < SIZE; i++) {
+      tabela->chaves[i] = criaLista();
     }
-
-    // Procurar o nome na lista
-    Node* atual = tabela[chave];
-    while (atual != NULL) {
-        if (strcmp(atual->nome, nome) == 0) {
-            return 1; // Nome encontrado
-        }
-        atual = atual->prox;
-    }
-
-    return 0; // Nome não encontrado
+  }
+  return tabela;
 }
 
-int contarElementosPorChave(int chave) {
-    int count = 0;
-
-    // Verificar se a chave está vazia
-    if (tabela[chave] == NULL) {
-        return 0;
-    }
-
-    // Contar os elementos na lista
-    Node* atual = tabela[chave];
-    while (atual != NULL) {
-        count++;
-        atual = atual->prox;
-    }
-
-    return count;
+Elemento* criaElemento(char nome[]) {
+  Elemento* nodo = (Elemento*) malloc(sizeof(Elemento));
+  if (nodo == NULL) {
+    return NULL;
+  } else {
+    strcpy(nodo->nome, nome);
+    nodo->next = NULL;
+    nodo->prev = NULL;
+  }
+  return nodo;
 }
 
-void removerNome(const char* nome) {
-    int chave = hash(nome);
-
-    // Verificar se a chave está vazia
-    if (tabela[chave] == NULL) {
-        return;
-    }
-
-    // Procurar o nome na lista
-    Node* atual = tabela[chave];
-    while (atual != NULL) {
-        if (strcmp(atual->nome, nome) == 0) {
-            // Remover o nó da lista
-            if (atual->ant == NULL) {
-                // O nó é o primeiro da lista
-                tabela[chave] = atual->prox;
-            } else {
-                atual->ant->prox = atual->prox;
-            }
-            if (atual->prox != NULL) {
-                atual->prox->ant = atual->ant;
-            }
-            free(atual);
-            return;
-        }
-        atual = atual->prox;
-    }
-}
-
-void exibirHistograma() {
-    // Configurar o gnuplot para plotagem
-    gnuplot_ctrl* gp;
-    gp = gnuplot_init();
-
-    // Preparar os dados para plotagem
-    int contagens[NUM_CHAVES] = {0};
-    for (int i = 0; i < NUM_CHAVES; i++) {
-        contagens[i] = contarElementosPorChave(i);
-    }
-
-    // Enviar os dados para o gnuplot
-    char comando[100];
-    sprintf(comando, "set xlabel 'Chave'");
-    gnuplot_cmd(gp, comando);
-    sprintf(comando, "set ylabel 'Contagem de Nomes'");
-    gnuplot_cmd(gp, comando);
-    sprintf(comando, "set title 'Distribuição dos Nomes nas Chaves'");
-    gnuplot_cmd(gp, comando);
-    sprintf(comando, "set style fill solid");
-    gnuplot_cmd(gp, comando);
-    sprintf(comando, "plot '-' using 1:2 with boxes");
-    gnuplot_cmd(gp, comando);
-
-    for (int i = 0; i < NUM_CHAVES; i++) {
-        sprintf(comando, "%d %d", i, contagens[i]);
-        gnuplot_cmd(gp, comando);
-    }
-    gnuplot_cmd(gp, "e");
-
-    // Aguardar ação do usuário antes de fechar o gráfico
-    printf("Pressione enter para fechar o gráfico.\n");
-    getchar();
-
-    // Fechar o gnuplot
-    gnuplot_close(gp);
-}
-
-int main() {
-    // Inicializar todas as posições como vazias
-    for (int i = 0; i < NUM_CHAVES; i++) {
-        tabela[i] = NULL;
-    }
-
-    // Abrir o arquivo
-    FILE* arquivo = fopen("nomes.txt", "r");
-    if (arquivo == NULL) {
-        printf("Erro ao abrir o arquivo.\n");
-        return 1;
-    }
-
-    // Ler os nomes do arquivo e inserir na tabela hash
-    char linha[TAM_MAX_NOME];
-    while (fgets(linha, TAM_MAX_NOME, arquivo) != NULL) {
-        // Remover o caractere de nova linha (\n) da string
-        linha[strcspn(linha, "\n")] = '\0';
-
-        inserirNome(linha);
-    }
-
-    // Fechar o arquivo
-    fclose(arquivo);
-
-    // Exibir o histograma
-    exibirHistograma();
-
-    // Buscar um nome específico
-    char nome_desejado[TAM_MAX_NOME] = "VALDELUZIA";
-    int chave_desejada = hash(nome_desejado);
-
-    if (consultarNome(nome_desejado)) {
-        printf("O nome %s está na base de dados.\n", nome_desejado);
-    } else {
-        printf("O nome %s não foi encontrado na base de dados.\n", nome_desejado);
-    }
-
-    // Remover um nome da base de dados
-    char nome_remover[TAM_MAX_NOME] = "VALDELUZIA";
-    removerNome(nome_remover);
-
-    // Exibir o histograma atualizado após a remoção
-    exibirHistograma();
-
-    // Liberar a memória alocada
-    for (int i = 0; i < NUM_CHAVES; i++) {
-        Node* atual = tabela[i];
-        while (atual != NULL) {
-            Node* prox = atual->prox;
-            free(atual);
-            atual = prox;
-        }
-    }
-
+int insereNaLista(Lista* lista, Elemento* novo) {
+  if (lista == NULL || novo == NULL) {
     return 0;
+  }
+  
+  if (lista->head == NULL) {
+    lista->head = novo;
+    lista->tail = novo;
+  } else {
+    novo->prev = lista->tail;
+    lista->tail->next = novo;
+    lista->tail = novo;
+  }
+  
+  lista->tam++;
+  return 1;
+}
+
+int removeDaLista(Lista* lista, Elemento* elemento) {
+  if (lista == NULL || elemento == NULL) {
+    return 0;
+  }
+  
+  if (elemento == lista->head) {
+    lista->head = elemento->next;
+    if (lista->head == NULL) {
+      lista->tail = NULL;
+    } else {
+      lista->head->prev = NULL;
+    }
+  } else {
+    elemento->prev->next = elemento->next;
+    if (elemento->next == NULL) {
+      lista->tail = elemento->prev;
+    } else {
+      elemento->next->prev = elemento->prev;
+    }
+  }
+  
+  free(elemento);
+  lista->tam--;
+  return 1;
+}
+
+Elemento* pesquisaNaLista(Lista* lista, char nome[]) {
+  if (lista == NULL) {
+    return NULL;
+  }
+
+  Elemento* aux = lista->head;
+  while (aux != NULL) {
+    if (strcmp(aux->nome, nome) == 0) {
+      return aux;
+    }
+    aux = aux->next;
+  }
+  return NULL;
+}
+
+void percorreLista(Lista* lista) {
+  if (lista == NULL || lista->head == NULL) {
+    return;
+  }
+
+  Elemento* aux = lista->head;
+  while (aux != NULL) {
+    printf("%s, ", aux->nome);
+    aux = aux->next;
+  }
+}
+
+void limpaLista(Lista* lista) {
+  if (lista == NULL) {
+    return;
+  }
+
+  while (lista->head != NULL) {
+    removeDaLista(lista, lista->head);
+  }
+  free(lista);
+}
+
+int funcaoHash(char* nome) {
+  int h = 0;
+  for (int i = 0; i < strlen(nome); i++) {
+    h = ((31 * h + (int) nome[i]) % SIZE);
+  }
+  return h;
+}
+
+void insereNaTabela(TabelaHash* tabela, char nome[]) {
+  int posicao = funcaoHash(nome);
+  Elemento* novo = criaElemento(nome);
+  if (novo != NULL) {
+    insereNaLista(tabela->chaves[posicao], novo);
+  }
+}
+
+void removeNaTabela(TabelaHash* tabela, char nome[]) {
+  int posicao = funcaoHash(nome);
+  Elemento* elemento = pesquisaNaLista(tabela->chaves[posicao], nome);
+  if (elemento != NULL) {
+    removeDaLista(tabela->chaves[posicao], elemento);
+  }
+}
+
+void percorreTabela(TabelaHash* tabela) {
+  for (int i = 0; i < SIZE; i++) {
+    printf("\nChave: %i\n", i);
+    percorreLista(tabela->chaves[i]);
+  }
 }
