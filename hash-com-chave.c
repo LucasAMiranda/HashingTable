@@ -5,7 +5,7 @@
 #define SIZE 53
 
 typedef struct sElemento {
-   char nome[31];
+   char nome[30];
    struct sElemento *next;
    struct sElemento *prev;
 } Elemento;
@@ -35,27 +35,36 @@ void insereNaTabela(TabelaHash*, char*);
 TabelaHash* criaTabela();
 void percorreTabela(TabelaHash*);
 void removeNaTabela(TabelaHash*, char*);
+int verificaNome(TabelaHash*, char*);
 
 int main(void) {
   TabelaHash *hash;
   hash = criaTabela();
-    
+  
   FILE* arquivo = fopen("nomes.txt", "r");
   if (arquivo == NULL) {
-    printf("Erro ao abrir o arquivo.\n");
-    return 1;
+      printf("Erro ao abrir o arquivo.\n");
+      return 1;
   }
-
-  char linha[31];
-  while (fgets(linha, sizeof(linha), arquivo) != NULL) {
-    linha[strcspn(linha, "\n")] = '\0';
-    insereNaTabela(hash, linha);
-  }
-
-  fclose(arquivo);
-
-  percorreTabela(hash);
   
+  char linha[30];
+  while (fgets(linha, 30, arquivo) != NULL) {
+      linha[strcspn(linha, "\n")] = '\0';
+      insereNaTabela(hash, linha);
+  }
+  
+  fclose(arquivo);
+  
+  char nomePesquisar[30];
+  printf("Digite o nome a ser pesquisado: ");
+  scanf("%s", nomePesquisar);
+  
+  if (verificaNome(hash, nomePesquisar)) {
+    printf("O nome está presente no arquivo.\n");
+  } else {
+    printf("O nome não está presente no arquivo.\n");
+  }
+
   return 0;
 }
 
@@ -141,10 +150,6 @@ int removeDaLista(Lista* lista, Elemento* elemento) {
 }
 
 Elemento* pesquisaNaLista(Lista* lista, char nome[]) {
-  if (lista == NULL) {
-    return NULL;
-  }
-
   Elemento* aux = lista->head;
   while (aux != NULL) {
     if (strcmp(aux->nome, nome) == 0) {
@@ -156,10 +161,6 @@ Elemento* pesquisaNaLista(Lista* lista, char nome[]) {
 }
 
 void percorreLista(Lista* lista) {
-  if (lista == NULL || lista->head == NULL) {
-    return;
-  }
-
   Elemento* aux = lista->head;
   while (aux != NULL) {
     printf("%s, ", aux->nome);
@@ -168,10 +169,6 @@ void percorreLista(Lista* lista) {
 }
 
 void limpaLista(Lista* lista) {
-  if (lista == NULL) {
-    return;
-  }
-
   while (lista->head != NULL) {
     removeDaLista(lista, lista->head);
   }
@@ -202,9 +199,12 @@ void removeNaTabela(TabelaHash* tabela, char nome[]) {
   }
 }
 
-void percorreTabela(TabelaHash* tabela) {
-  for (int i = 0; i < SIZE; i++) {
-    printf("\nChave: %i\n", i);
-    percorreLista(tabela->chaves[i]);
+int verificaNome(TabelaHash* tabela, char nome[]) {
+  int posicao = funcaoHash(nome);
+  Elemento* elemento = pesquisaNaLista(tabela->chaves[posicao], nome);
+  if (elemento != NULL) {
+    return 1; // O nome está presente no arquivo
+  } else {
+    return 0; // O nome não está presente no arquivo
   }
 }
