@@ -182,7 +182,7 @@ int main() {
     exibirHistograma();
 
     // Buscar um nome específico
-    char nome_desejado[TAM_MAX_NOME] = "João";
+    char nome_desejado[TAM_MAX_NOME] = "VALDELUZIA";
     int chave_desejada = hash(nome_desejado);
 
     if (consultarNome(nome_desejado)) {
@@ -192,7 +192,7 @@ int main() {
     }
 
     // Remover um nome da base de dados
-    char nome_remover[TAM_MAX_NOME] = "Maria";
+    char nome_remover[TAM_MAX_NOME] = "VALDELUZIA";
     removerNome(nome_remover);
 
     // Exibir o histograma atualizado após a remoção
