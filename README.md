@@ -24,8 +24,5 @@ O histograma de frequência de cada uma das chaves da tabela hash mostra a distr
 9) A distribuição dos nomes em cada uma das chaves utilizando um histograma e explicar o que o histograma está apresentando
 O código já possui a função exibirHistograma() que gera o histograma de frequência das chaves. O histograma é uma representação gráfica da distribuição dos nomes em cada uma das chaves. Cada barra do histograma corresponde a uma chave, e a altura da barra representa a quantidade de elementos presentes naquela chave.
 
-Ao executar o código, a função exibirHistograma() é chamada, e o histograma é plotado utilizando a biblioteca Gnuplot. O eixo x do histograma representa as chaves, enquanto o eixo y representa a contagem de nomes em cada chave. O histograma permite visualizar se a distribuição dos nomes é uniforme, ou seja, se as barras estão aproximadamente na mesma altura, ou se existem chaves com uma concentração maior de nomes.
-
-Ao analisar o histograma gerado, é possível identificar a distribuição dos nomes nas chaves e verificar se há uma distribuição uniforme ou desigual. Essa análise auxilia na compreensão do desempenho da tabela hash e na identificação de possíveis colisões frequentes.
 
 
