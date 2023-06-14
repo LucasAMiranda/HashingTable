@@ -5,19 +5,19 @@
 #define SIZE 53
 
 typedef struct sElemento {
-   char nome[30];
-   struct sElemento *next;
-   struct sElemento *prev;
+    char nome[30];
+    struct sElemento* next;
+    struct sElemento* prev;
 } Elemento;
 
 typedef struct sLista {
-     struct sElemento *head;
-     struct sElemento *tail;
-     int tam;
+    struct sElemento* head;
+    struct sElemento* tail;
+    int tam;
 } Lista;
- 
+
 typedef struct sTabelaHash {
-   Lista *chaves[SIZE];
+    Lista* chaves[SIZE];
 } TabelaHash;
 
 // Funções da lista encadeada
@@ -37,174 +37,298 @@ void percorreTabela(TabelaHash*);
 void removeNaTabela(TabelaHash*, char*);
 int verificaNome(TabelaHash*, char*);
 
-int main(void) {
-  TabelaHash *hash;
-  hash = criaTabela();
-  
-  FILE* arquivo = fopen("nomes.txt", "r");
-  if (arquivo == NULL) {
-      printf("Erro ao abrir o arquivo.\n");
-      return 1;
-  }
-  
-  char linha[30];
-  while (fgets(linha, 30, arquivo) != NULL) {
-      linha[strcspn(linha, "\n")] = '\0';
-      insereNaTabela(hash, linha);
-  }
-  
-  fclose(arquivo);
-  
-  char nomePesquisar[30];
-  printf("Digite o nome a ser pesquisado: ");
-  scanf("%s", nomePesquisar);
-  
-  if (verificaNome(hash, nomePesquisar)) {
-    printf("O nome está presente no arquivo.\n");
-  } else {
-    printf("O nome não está presente no arquivo.\n");
-  }
+// Funções de manipulação dos dados
+void quickSort(char* arr[], int low, int high);
+int partition(char* arr[], int low, int high);
+void displayHistogram(TabelaHash* tabela);
 
-  return 0;
+int main(void) {
+    TabelaHash* hash;
+    hash = criaTabela();
+
+    FILE* arquivo = fopen("nomes.txt", "r");
+    if (arquivo == NULL) {
+        printf("Erro ao abrir o arquivo.\n");
+        return 1;
+    }
+
+    char linha[30];
+    while (fgets(linha, 30, arquivo) != NULL) {
+        linha[strcspn(linha, "\n")] = '\0';
+        insereNaTabela(hash, linha);
+    }
+
+    fclose(arquivo);
+
+    int opcao;
+    printf("Escolha uma opcao:\n");
+    printf("1 - Verificar se um nome esta presente\n");
+    printf("2 - Mostrar histograma de nomes\n");
+    printf("3 - Remover um nome\n");
+    printf("Opcao: ");
+    scanf("%d", &opcao);
+
+    switch (opcao) {
+        case 1: {
+            char nomePesquisar[30];
+            printf("Digite o nome a ser pesquisado: ");
+            scanf("%s", nomePesquisar);
+
+            if (verificaNome(hash, nomePesquisar)) {
+                printf("O nome esta presente no arquivo.\n");
+            } else {
+                printf("O nome nao esta presente no arquivo.\n");
+            }
+            break;
+        }
+        case 2:
+            displayHistogram(hash);
+            break;
+        case 3: {
+            char nomeRemover[30];
+            printf("Digite o nome a ser removido: ");
+            scanf("%s", nomeRemover);
+            removeNaTabela(hash, nomeRemover);
+            printf("Nome removido com sucesso.\n");
+            break;
+        }
+        default:
+            printf("Opcao invalida.\n");
+            break;
+    }
+
+    return 0;
 }
 
 Lista* criaLista() {
-  Lista* lista = (Lista*) malloc(sizeof(Lista));
-  if (lista == NULL) {
-    return NULL;
-  }
-  else {
-    lista->head = NULL;
-    lista->tail = NULL;
-    lista->tam = 0;
-  }
-  return lista;
+    Lista* lista = (Lista*)malloc(sizeof(Lista));
+    if (lista == NULL) {
+        return NULL;
+    } else {
+        lista->head = NULL;
+        lista->tail = NULL;
+        lista->tam = 0;
+    }
+    return lista;
 }
 
 TabelaHash* criaTabela() {
-  TabelaHash* tabela = (TabelaHash*) malloc(sizeof(TabelaHash));
-  if (tabela == NULL) {
-    return NULL;
-  } else {
-    for (int i = 0; i < SIZE; i++) {
-      tabela->chaves[i] = criaLista();
+    TabelaHash* tabela = (TabelaHash*)malloc(sizeof(TabelaHash));
+    if (tabela == NULL) {
+        return NULL;
+    } else {
+        for (int i = 0; i < SIZE; i++) {
+            tabela->chaves[i] = criaLista();
+        }
     }
-  }
-  return tabela;
+    return tabela;
 }
 
-Elemento* criaElemento(char nome[]) {
-  Elemento* nodo = (Elemento*) malloc(sizeof(Elemento));
-  if (nodo == NULL) {
-    return NULL;
-  } else {
-    strcpy(nodo->nome, nome);
-    nodo->next = NULL;
-    nodo->prev = NULL;
-  }
-  return nodo;
+Elemento* criaElemento(char* nome) {
+    Elemento* elemento = (Elemento*)malloc(sizeof(Elemento));
+    if (elemento == NULL) {
+        return NULL;
+    } else {
+        strncpy(elemento->nome, nome, 30);
+        elemento->next = NULL;
+        elemento->prev = NULL;
+    }
+    return elemento;
 }
 
-int insereNaLista(Lista* lista, Elemento* novo) {
-  if (lista == NULL || novo == NULL) {
-    return 0;
-  }
-  
-  if (lista->head == NULL) {
-    lista->head = novo;
-    lista->tail = novo;
-  } else {
-    novo->prev = lista->tail;
-    lista->tail->next = novo;
-    lista->tail = novo;
-  }
-  
-  lista->tam++;
-  return 1;
+int insereNaLista(Lista* lista, Elemento* elemento) {
+    if (lista == NULL || elemento == NULL) {
+        return 0;
+    } else {
+        if (lista->head == NULL) {
+            lista->head = elemento;
+            lista->tail = elemento;
+        } else {
+            lista->tail->next = elemento;
+            elemento->prev = lista->tail;
+            lista->tail = elemento;
+        }
+        lista->tam++;
+    }
+    return 1;
 }
 
 int removeDaLista(Lista* lista, Elemento* elemento) {
-  if (lista == NULL || elemento == NULL) {
-    return 0;
-  }
-  
-  if (elemento == lista->head) {
-    lista->head = elemento->next;
-    if (lista->head == NULL) {
-      lista->tail = NULL;
+    if (lista == NULL || elemento == NULL) {
+        return 0;
     } else {
-      lista->head->prev = NULL;
+        if (elemento == lista->head) {
+            lista->head = elemento->next;
+        } else {
+            elemento->prev->next = elemento->next;
+        }
+        if (elemento == lista->tail) {
+            lista->tail = elemento->prev;
+        } else {
+            elemento->next->prev = elemento->prev;
+        }
+        free(elemento);
+        lista->tam--;
     }
-  } else {
-    elemento->prev->next = elemento->next;
-    if (elemento->next == NULL) {
-      lista->tail = elemento->prev;
-    } else {
-      elemento->next->prev = elemento->prev;
-    }
-  }
-  
-  free(elemento);
-  lista->tam--;
-  return 1;
-}
-
-Elemento* pesquisaNaLista(Lista* lista, char nome[]) {
-  Elemento* aux = lista->head;
-  while (aux != NULL) {
-    if (strcmp(aux->nome, nome) == 0) {
-      return aux;
-    }
-    aux = aux->next;
-  }
-  return NULL;
+    return 1;
 }
 
 void percorreLista(Lista* lista) {
-  Elemento* aux = lista->head;
-  while (aux != NULL) {
-    printf("%s, ", aux->nome);
-    aux = aux->next;
-  }
+    if (lista == NULL) {
+        return;
+    }
+    Elemento* elemento = lista->head;
+    while (elemento != NULL) {
+        printf("%s\n", elemento->nome);
+        elemento = elemento->next;
+    }
+}
+
+Elemento* pesquisaNaLista(Lista* lista, char* nome) {
+    if (lista == NULL || nome == NULL) {
+        return NULL;
+    }
+    Elemento* elemento = lista->head;
+    while (elemento != NULL) {
+        if (strcmp(elemento->nome, nome) == 0) {
+            return elemento;
+        }
+        elemento = elemento->next;
+    }
+    return NULL;
 }
 
 void limpaLista(Lista* lista) {
-  while (lista->head != NULL) {
-    removeDaLista(lista, lista->head);
-  }
-  free(lista);
+    if (lista == NULL) {
+        return;
+    }
+    Elemento* elemento = lista->head;
+    while (elemento != NULL) {
+        Elemento* proximo = elemento->next;
+        free(elemento);
+        elemento = proximo;
+    }
+    lista->head = NULL;
+    lista->tail = NULL;
+    lista->tam = 0;
 }
 
-int funcaoHash(char* nome) {
-  int h = 0;
-  for (int i = 0; i < strlen(nome); i++) {
-    h = ((31 * h + (int) nome[i]) % SIZE);
-  }
-  return h;
+int funcaoHash(char* chave) {
+    if (chave == NULL) {
+        return -1;
+    }
+    int soma = 0;
+    int i = 0;
+    while (chave[i] != '\0') {
+        soma += (int)chave[i];
+        i++;
+    }
+    return soma % SIZE;
 }
 
-void insereNaTabela(TabelaHash* tabela, char nome[]) {
-  int posicao = funcaoHash(nome);
-  Elemento* novo = criaElemento(nome);
-  if (novo != NULL) {
-    insereNaLista(tabela->chaves[posicao], novo);
-  }
+void insereNaTabela(TabelaHash* tabela, char* nome) {
+    if (tabela == NULL || nome == NULL) {
+        return;
+    }
+    int posicao = funcaoHash(nome);
+    Lista* lista = tabela->chaves[posicao];
+    Elemento* elemento = criaElemento(nome);
+    insereNaLista(lista, elemento);
 }
 
-void removeNaTabela(TabelaHash* tabela, char nome[]) {
-  int posicao = funcaoHash(nome);
-  Elemento* elemento = pesquisaNaLista(tabela->chaves[posicao], nome);
-  if (elemento != NULL) {
-    removeDaLista(tabela->chaves[posicao], elemento);
-  }
+void percorreTabela(TabelaHash* tabela) {
+    if (tabela == NULL) {
+        return;
+    }
+    for (int i = 0; i < SIZE; i++) {
+        Lista* lista = tabela->chaves[i];
+        percorreLista(lista);
+    }
 }
 
-int verificaNome(TabelaHash* tabela, char nome[]) {
-  int posicao = funcaoHash(nome);
-  Elemento* elemento = pesquisaNaLista(tabela->chaves[posicao], nome);
-  if (elemento != NULL) {
-    return 1; // O nome está presente no arquivo
-  } else {
-    return 0; // O nome não está presente no arquivo
-  }
+void removeNaTabela(TabelaHash* tabela, char* nome) {
+    if (tabela == NULL || nome == NULL) {
+        return;
+    }
+    int posicao = funcaoHash(nome);
+    Lista* lista = tabela->chaves[posicao];
+    Elemento* elemento = pesquisaNaLista(lista, nome);
+    if (elemento != NULL) {
+        removeDaLista(lista, elemento);
+    }
+}
+
+int verificaNome(TabelaHash* tabela, char* nome) {
+    if (tabela == NULL || nome == NULL) {
+        return 0;
+    }
+    int posicao = funcaoHash(nome);
+    Lista* lista = tabela->chaves[posicao];
+    Elemento* elemento = pesquisaNaLista(lista, nome);
+    if (elemento != NULL) {
+        return 1;
+    }
+    return 0;
+}
+
+void quickSort(char* arr[], int low, int high) {
+    if (low < high) {
+        int pi = partition(arr, low, high);
+        quickSort(arr, low, pi - 1);
+        quickSort(arr, pi + 1, high);
+    }
+}
+
+int partition(char* arr[], int low, int high) {
+    char* pivot = arr[high];
+    int i = (low - 1);
+
+    for (int j = low; j <= high - 1; j++) {
+        if (strcmp(arr[j], pivot) < 0) {
+            i++;
+            char* temp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = temp;
+        }
+    }
+
+    char* temp = arr[i + 1];
+    arr[i + 1] = arr[high];
+    arr[high] = temp;
+
+    return (i + 1);
+}
+
+void displayHistogram(TabelaHash* tabela) {
+    int count[SIZE] = {0};
+
+    for (int i = 0; i < SIZE; i++) {
+        Lista* lista = tabela->chaves[i];
+        Elemento* elemento = lista->head;
+        while (elemento != NULL) {
+            count[i]++;
+            elemento = elemento->next;
+        }
+    }
+
+    char* nomes[SIZE];
+    int totalNomes = 0;
+
+    for (int i = 0; i < SIZE; i++) {
+        if (count[i] > 0) {
+            nomes[totalNomes] = tabela->chaves[i]->head->nome;
+            totalNomes++;
+        }
+    }
+
+    quickSort(nomes, 0, totalNomes - 1);
+
+    printf("Histograma de Nomes:\n");
+    for (int i = 0; i < totalNomes; i++) {
+        printf("%s: ", nomes[i]);
+        for (int j = 0; j < count[funcaoHash(nomes[i])]; j++) {
+            printf("*");
+        }
+        printf("\n");
+    }
 }
